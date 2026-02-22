@@ -1,0 +1,27 @@
+name: Weekly Feedback Sync
+
+on:
+  schedule:
+    - cron: "0 14 * * 1"
+  workflow_dispatch:
+
+jobs:
+  sync-feedback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger feedback sync endpoint
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          FEEDBACK_SYNC_TOKEN: ${{ secrets.FEEDBACK_SYNC_TOKEN }}
+        run: |
+          if [ -z "$APP_BASE_URL" ] || [ -z "$FEEDBACK_SYNC_TOKEN" ]; then
+            echo "Missing APP_BASE_URL or FEEDBACK_SYNC_TOKEN secret"
+            exit 1
+          fi
+
+          curl --fail --show-error --silent \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "x-feedback-sync-token: $FEEDBACK_SYNC_TOKEN" \
+            "$APP_BASE_URL/api/feedback/sync" \
+            -d '{}'

@@ -1,0 +1,268 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String    // hashed
+  role          UserRole  @default(VIEWER)
+  feedbackVotes FeedbackVote[]
+  feedbackComments FeedbackComment[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum UserRole {
+  VIEWER
+  ADMIN
+}
+
+model Roadmap {
+  id          String   @id @default(cuid())
+  year        Int      // e.g., 2026
+  published   Boolean  @default(false)
+  snapshots   RoadmapSnapshot[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  sections    Section[]
+}
+
+model RoadmapSnapshot {
+  id          String   @id @default(cuid())
+  roadmapId   String
+  roadmap     Roadmap  @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  name        String   // e.g., "Q1 2026 as of Jan 15"
+  data        Json     // Full roadmap state at snapshot time
+  createdAt   DateTime @default(now())
+}
+
+
+model Section {
+  id          String   @id @default(cuid())
+  roadmapId   String
+  roadmap     Roadmap  @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  name        String
+  description String?  @db.Text
+  order       Int      // for sorting
+  items       Item[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Item {
+  id            String     @id @default(cuid())
+  sectionId     String
+  section       Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?    @db.Text
+  status        String     // e.g., "In dev", "Ready for dev"
+  risk          String?    // Low, Medium, High
+  blockerNotes  String?    @db.Text
+  order         Int        // for sorting within section
+  quarters      Quarter[]
+  jiraLinks     JiraLink[]
+  dependencies  ItemDependency[] @relation("ItemDependencies")
+  dependedOnBy  ItemDependency[] @relation("ItemDependedOn")
+  feedbackLinks FeedbackRoadmapItem[]
+  conceptLinks  ConceptRoadmapItem[]
+  comments      ItemComment[]
+  changeLogs    ItemChangeLog[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model ItemDependency {
+  id           String   @id @default(cuid())
+  itemId       String   // The item that has the dependency
+  item         Item     @relation("ItemDependencies", fields: [itemId], references: [id], onDelete: Cascade)
+  dependsOnId  String   // The item this depends on
+  dependsOn    Item     @relation("ItemDependedOn", fields: [dependsOnId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+model ItemComment {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  content   String   @db.Text
+  authorId  String
+  createdAt DateTime @default(now())
+}
+
+model ItemChangeLog {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  changeType String  // "created", "status_changed", "quarters_changed", "risk_changed", etc.
+  oldValue  String?  @db.Text
+  newValue  String?  @db.Text
+  authorId  String?
+  createdAt DateTime @default(now())
+}
+
+model Quarter {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  quarter   Int      // 1, 2, 3, or 4
+  year      Int      // e.g., 2026
+  createdAt DateTime @default(now())
+}
+
+model JiraLink {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  jiraKey   String   // e.g., "PROJ-123"
+  url       String?  // full JIRA URL (optional, can be constructed from key)
+  createdAt DateTime @default(now())
+}
+
+enum FeedbackSource {
+  SLACK
+  INTERVIEW
+  SUPPORT
+  SALES
+  OTHER
+}
+
+enum ExternalFeedbackSource {
+  MANUAL
+  NOTION
+  SLACK
+}
+
+enum FeedbackWorkflowStatus {
+  NOT_STARTED
+  TRIAGED
+  IN_PROGRESS
+  ADDRESSED
+}
+
+model FeedbackTheme {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  description String?         @db.Text
+  order       Int             @default(0)
+  entries     FeedbackEntry[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model FeedbackEntry {
+  id              String                @id @default(cuid())
+  title           String
+  summary         String                @db.Text
+  externalSource  ExternalFeedbackSource @default(MANUAL)
+  externalId      String?
+  rawSourceUrl    String?
+  lastSyncedAt    DateTime?
+  submittedBy     String?
+  source          FeedbackSource
+  sourceRef       String?
+  customerSegment String?
+  isBeingAddressed Boolean              @default(false)
+  workflowStatus  FeedbackWorkflowStatus @default(NOT_STARTED)
+  jiraUrl         String?
+  urgency         Int                   @default(3)
+  receivedAt      DateTime
+  published       Boolean               @default(false)
+  themeId         String?
+  theme           FeedbackTheme?        @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  roadmapLinks    FeedbackRoadmapItem[]
+  votes           FeedbackVote[]
+  comments        FeedbackComment[]
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@unique([externalSource, externalId])
+}
+
+model FeedbackVote {
+  id         String        @id @default(cuid())
+  feedbackId String
+  userId     String
+  value      Int
+  feedback   FeedbackEntry @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@unique([feedbackId, userId])
+}
+
+model FeedbackRoadmapItem {
+  id         String        @id @default(cuid())
+  feedbackId String
+  itemId     String
+  feedback   FeedbackEntry @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  item       Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+
+  @@unique([feedbackId, itemId])
+}
+
+model FeedbackComment {
+  id         String        @id @default(cuid())
+  feedbackId String
+  authorId   String
+  content    String        @db.Text
+  feedback   FeedbackEntry @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  author     User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+enum ConceptStage {
+  EXPLORING
+  VALIDATING
+  PLANNED
+}
+
+enum ConceptArtifactType {
+  MOCKUP
+  PROTOTYPE
+  DOC
+}
+
+model Concept {
+  id            String              @id @default(cuid())
+  title         String
+  summary       String              @db.Text
+  problem       String              @db.Text
+  howItWorks    String              @db.Text
+  whyValuable   String              @db.Text
+  validationPlan String             @db.Text
+  hypothesis    String              @db.Text
+  stage         ConceptStage
+  artifactType  ConceptArtifactType
+  artifactUrl   String
+  artifactLabel String?
+  owner         String?
+  decisionDate  DateTime?
+  published     Boolean             @default(false)
+  roadmapLinks  ConceptRoadmapItem[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model ConceptRoadmapItem {
+  id        String   @id @default(cuid())
+  conceptId String
+  itemId    String
+  concept   Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([conceptId, itemId])
+}
