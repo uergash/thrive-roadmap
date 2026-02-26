@@ -41,7 +41,6 @@ export async function GET(request: NextRequest) {
       where: { sectionId },
       include: {
         quarters: true,
-        jiraLinks: true,
         dependencies: {
           include: {
             dependsOn: {
@@ -105,16 +104,11 @@ export async function POST(request: NextRequest) {
         productBrief: data.productBrief ?? null,
         designs: data.designs ?? null,
         order: data.order ?? itemCount,
+        jiraLinks: data.jiraLinks ?? [],
         quarters: {
           create: (data.quarters ?? []).map((quarter) => ({
             quarter,
             year,
-          })),
-        },
-        jiraLinks: {
-          create: (data.jiraLinks ?? []).map((jiraKey) => ({
-            jiraKey,
-            url: null,
           })),
         },
         dependencies: {
@@ -125,7 +119,6 @@ export async function POST(request: NextRequest) {
       },
       include: {
         quarters: true,
-        jiraLinks: true,
         dependencies: {
           include: {
             dependsOn: {
@@ -240,12 +233,6 @@ export async function PATCH(request: NextRequest) {
       })
     }
 
-    if (data.jiraLinks !== undefined) {
-      await prisma.jiraLink.deleteMany({
-        where: { itemId: data.id },
-      })
-    }
-
     if (data.dependsOnIds !== undefined) {
       await prisma.itemDependency.deleteMany({
         where: { itemId: data.id },
@@ -263,19 +250,12 @@ export async function PATCH(request: NextRequest) {
         ...(data.productBrief !== undefined && { productBrief: data.productBrief }),
         ...(data.designs !== undefined && { designs: data.designs }),
         ...(data.order !== undefined && { order: data.order }),
+        ...(data.jiraLinks !== undefined && { jiraLinks: data.jiraLinks }),
         ...(data.quarters !== undefined && {
           quarters: {
             create: data.quarters.map((quarter) => ({
               quarter,
               year,
-            })),
-          },
-        }),
-        ...(data.jiraLinks !== undefined && {
-          jiraLinks: {
-            create: data.jiraLinks.map((jiraKey) => ({
-              jiraKey,
-              url: null,
             })),
           },
         }),
@@ -289,7 +269,6 @@ export async function PATCH(request: NextRequest) {
       },
       include: {
         quarters: true,
-        jiraLinks: true,
         dependencies: {
           include: {
             dependsOn: {

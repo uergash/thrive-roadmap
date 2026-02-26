@@ -128,7 +128,7 @@ export default function ItemPanel({
           .map((q) => q.quarter)
           .sort()
       )
-      setJiraLinks(item.jiraLinks.map((link) => link.jiraKey))
+      setJiraLinks(item.jiraLinks)
       setDependsOnIds(
         (item.dependencies || []).map((d) => d.dependsOnId)
       )
@@ -575,18 +575,15 @@ export default function ItemPanel({
                     <Label className="text-sm font-semibold">JIRA Links</Label>
                     {item.jiraLinks.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {item.jiraLinks.map((link) => (
+                        {item.jiraLinks.map((key) => (
                           <a
-                            key={link.id}
-                            href={
-                              link.url ||
-                              `https://jira.example.com/browse/${link.jiraKey}`
-                            }
+                            key={key}
+                            href={`https://jira.example.com/browse/${key}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 rounded bg-blue-100 px-3 py-1 text-sm text-blue-800 hover:bg-blue-200"
                           >
-                            {link.jiraKey}
+                            {key}
                             <ExternalLink className="h-3 w-3" />
                           </a>
                         ))}

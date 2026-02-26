@@ -111,11 +111,10 @@ export default function PublicRoadmapView() {
           Public view. Updated from the currently published roadmap.
         </div>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard label="Initiatives" value={summary.initiatives} />
           <MetricCard label="Items" value={summary.items} />
           <MetricCard label="In Flight" value={summary.inFlight} />
-          <MetricCard label="High Risk" value={summary.atRisk} tone="warn" />
           <MetricCard label="Done" value={summary.done} tone="good" />
         </section>
 
@@ -145,7 +144,6 @@ export default function PublicRoadmapView() {
                       <div className="mb-2 flex flex-wrap items-center gap-2">
                         <span className="font-medium text-gray-900">{item.name}</span>
                         <Badge>{item.status}</Badge>
-                        {item.risk && <Badge tone={item.risk.toLowerCase() === "high" ? "warn" : "neutral"}>{item.risk} risk</Badge>}
                       </div>
 
                       {item.description && <p className="line-clamp-2 text-sm text-gray-700">{item.description}</p>}
@@ -154,8 +152,8 @@ export default function PublicRoadmapView() {
                         {item.quarters.map((quarter) => (
                           <span key={quarter.id} className="rounded bg-gray-100 px-2 py-1">Q{quarter.quarter} {quarter.year}</span>
                         ))}
-                        {item.jiraLinks.map((jira) => (
-                          <span key={jira.id} className="rounded bg-indigo-100 px-2 py-1 text-indigo-800">{jira.jiraKey}</span>
+                        {item.jiraLinks.map((key) => (
+                          <span key={key} className="rounded bg-indigo-100 px-2 py-1 text-indigo-800">{key}</span>
                         ))}
                       </div>
                     </button>

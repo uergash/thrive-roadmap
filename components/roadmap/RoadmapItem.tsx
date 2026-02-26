@@ -82,7 +82,7 @@ export default function RoadmapItem({
       risk: item.risk || null,
       blockerNotes: item.blockerNotes || null,
       quarters: newQuarters,
-      jiraLinks: item.jiraLinks.map((link) => link.jiraKey),
+      jiraLinks: item.jiraLinks,
     }).catch(() => {
       // Revert on error
       onUpdate(item)
@@ -104,7 +104,7 @@ export default function RoadmapItem({
       risk: item.risk || null,
       blockerNotes: item.blockerNotes || null,
       quarters: getQuarterNumbers(),
-      jiraLinks: item.jiraLinks.map((link) => link.jiraKey),
+      jiraLinks: item.jiraLinks,
     }).catch(() => {
       onUpdate(item)
       toast({
@@ -125,7 +125,7 @@ export default function RoadmapItem({
       risk: health,
       blockerNotes: item.blockerNotes || null,
       quarters: getQuarterNumbers(),
-      jiraLinks: item.jiraLinks.map((link) => link.jiraKey),
+      jiraLinks: item.jiraLinks,
     }).catch(() => {
       onUpdate(item)
       toast({
@@ -314,16 +314,16 @@ export default function RoadmapItem({
             )}
             {item.jiraLinks.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
-                {item.jiraLinks.map((link) => (
+                {item.jiraLinks.map((key) => (
                   <a
-                    key={link.id}
-                    href={link.url || `https://jira.example.com/browse/${link.jiraKey}`}
+                    key={key}
+                    href={`https://jira.example.com/browse/${key}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-800 hover:bg-blue-100"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {link.jiraKey}
+                    {key}
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 ))}

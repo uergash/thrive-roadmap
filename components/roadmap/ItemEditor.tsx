@@ -71,7 +71,7 @@ export default function ItemEditor({
           .map((q) => q.quarter)
           .sort()
       )
-      setJiraLinks(item.jiraLinks.map((link) => link.jiraKey))
+      setJiraLinks(item.jiraLinks)
       setNewJiraLink("")
     }
   }, [isOpen, item, year])
