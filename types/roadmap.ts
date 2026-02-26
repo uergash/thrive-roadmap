@@ -7,6 +7,8 @@ export interface RoadmapItem {
   status: string
   risk: string | null
   blockerNotes: string | null
+  productBrief: string | null
+  designs: string | null
   sectionId: string
   order: number
   quarters: Quarter[]
@@ -75,4 +77,12 @@ export interface Roadmap {
   published?: boolean
   columns?: RoadmapColumn[]
   sections: Section[]
+}
+
+export interface RoadmapSnapshot {
+  id: string
+  roadmapId: string
+  name: string
+  data: Roadmap
+  createdAt: string
 }

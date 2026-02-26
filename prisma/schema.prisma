@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -68,6 +69,8 @@ model Item {
   status        String     // e.g., "In dev", "Ready for dev"
   risk          String?    // Low, Medium, High
   blockerNotes  String?    @db.Text
+  productBrief  String?    @db.Text
+  designs       String?    @db.Text
   order         Int        // for sorting within section
   quarters      Quarter[]
   jiraLinks     JiraLink[]

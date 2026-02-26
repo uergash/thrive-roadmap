@@ -8,7 +8,7 @@ import QuarterBar from "./QuarterBar"
 import ItemPanel from "./ItemPanel"
 import StatusSelector from "./StatusSelector"
 import HealthSelector from "./HealthSelector"
-import { Trash2, Edit, ExternalLink } from "lucide-react"
+import { ExternalLink } from "lucide-react"
 import type { RoadmapItem as RoadmapItemType } from "@/types/roadmap"
 
 interface RoadmapItemProps {
@@ -21,6 +21,7 @@ interface RoadmapItemProps {
   columns?: Array<{ name: string; type: "quarter" | "custom"; order: number; quarter?: number }>
   allItems?: RoadmapItemType[]
   gridTemplateColumns?: string
+  showHealthColumn?: boolean
 }
 
 export default function RoadmapItem({
@@ -38,6 +39,7 @@ export default function RoadmapItem({
   ],
   allItems = [],
   gridTemplateColumns,
+  showHealthColumn = true,
 }: RoadmapItemProps) {
   const { toast } = useToast()
   const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -143,6 +145,8 @@ export default function RoadmapItem({
     quarters: number[]
     jiraLinks: string[]
     dependsOnIds?: string[]
+    productBrief?: string | null
+    designs?: string | null
   }): Promise<void> => {
     try {
       const response = await fetch("/api/roadmap/items", {
@@ -327,7 +331,7 @@ export default function RoadmapItem({
             )}
           </div>
           {isAdmin && (
-            <div className="pointer-events-none flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
+            <div className="pointer-events-none flex items-center opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
               <Button
                 variant="ghost"
                 size="icon"
@@ -336,39 +340,31 @@ export default function RoadmapItem({
                   setIsEditorOpen(true)
                 }}
                 className="h-6 w-6 focus-visible:ring-2 focus-visible:ring-[hsl(var(--roadmap-accent-brand))]"
+                title="Open details"
               >
-                <Edit className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleDelete()
-                }}
-                className="h-6 w-6 focus-visible:ring-2 focus-visible:ring-[hsl(var(--roadmap-accent-brand))]"
-              >
-                <Trash2 className="h-3 w-3 text-red-600" />
+                <ExternalLink className="h-3 w-3" />
               </Button>
             </div>
           )}
         </div>
-        <div className="flex items-center">
-          {isAdmin ? (
-            <HealthSelector
-              health={item.risk || null}
-              onHealthChange={handleHealthChange}
-            />
-          ) : (
-            <span
-              className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${getHealthColor(
-                item.risk || null
-              )}`}
-            >
-              {item.risk || "—"}
-            </span>
-          )}
-        </div>
+        {showHealthColumn && (
+          <div className="flex items-center">
+            {isAdmin ? (
+              <HealthSelector
+                health={item.risk || null}
+                onHealthChange={handleHealthChange}
+              />
+            ) : (
+              <span
+                className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${getHealthColor(
+                  item.risk || null
+                )}`}
+              >
+                {item.risk || "—"}
+              </span>
+            )}
+          </div>
+        )}
         <div className="flex items-center">
           {isAdmin ? (
             <StatusSelector
@@ -417,6 +413,7 @@ export default function RoadmapItem({
         year={year}
         isAdmin={isAdmin}
         allItems={allItems}
+        onDelete={isAdmin ? () => onDelete(item.id) : undefined}
       />
     </>
   )

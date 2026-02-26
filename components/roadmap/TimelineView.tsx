@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import MainNav from "@/components/navigation/MainNav"
 import Section from "./Section"
 import ItemPanel from "./ItemPanel"
-import { Plus, LogOut, Users, X, Camera, SlidersHorizontal } from "lucide-react"
+import { Plus, LogOut, Users, X, Camera, SlidersHorizontal, History, ChevronDown } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { signOut } from "next-auth/react"
 import {
@@ -20,7 +20,15 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import type { Roadmap, Section as SectionType, RoadmapItem } from "@/types/roadmap"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import type { Roadmap, Section as SectionType, RoadmapItem, RoadmapSnapshot } from "@/types/roadmap"
 
 const QUARTERS = [1, 2, 3, 4] as const
 const DEFAULT_HEALTH_OPTIONS = ["Not started", "On track", "At risk", "Delayed"] as const
@@ -63,6 +71,10 @@ export default function TimelineView() {
   const [isSnapshotDialogOpen, setIsSnapshotDialogOpen] = useState(false)
   const [snapshotName, setSnapshotName] = useState("")
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false)
+  const [snapshots, setSnapshots] = useState<RoadmapSnapshot[]>([])
+  const [isLoadingSnapshots, setIsLoadingSnapshots] = useState(false)
+  const [activeSnapshot, setActiveSnapshot] = useState<RoadmapSnapshot | null>(null)
+  const [liveRoadmap, setLiveRoadmap] = useState<Roadmap | null>(null)
   const [draggingSectionId, setDraggingSectionId] = useState<string | null>(null)
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null)
   const [showDetailedQuarterMatrix, setShowDetailedQuarterMatrix] = useState(false)
@@ -142,9 +154,16 @@ export default function TimelineView() {
       number,
       {
         total: number
+        // health statuses
+        notStartedHealth: number
         onTrack: number
         atRisk: number
         delayed: number
+        // project statuses
+        notStarted: number
+        discovery: number
+        design: number
+        planning: number
         development: number
         released: number
       }
@@ -157,9 +176,14 @@ export default function TimelineView() {
 
       result[quarter] = {
         total: quarterItems.length,
+        notStartedHealth: quarterItems.filter((item) => item.risk === "Not started").length,
         onTrack: quarterItems.filter((item) => item.risk === "On track").length,
         atRisk: quarterItems.filter((item) => item.risk === "At risk").length,
         delayed: quarterItems.filter((item) => item.risk === "Delayed").length,
+        notStarted: quarterItems.filter((item) => item.status === "Not started").length,
+        discovery: quarterItems.filter((item) => item.status === "Discovery").length,
+        design: quarterItems.filter((item) => item.status === "Design").length,
+        planning: quarterItems.filter((item) => item.status === "Planning").length,
         development: quarterItems.filter((item) => item.status === "Development").length,
         released: quarterItems.filter((item) => item.status === "Released").length,
       }
@@ -172,14 +196,16 @@ export default function TimelineView() {
     quarterFilter !== "all" || healthFilter !== "all" || progressFilter !== "all"
 
   const isAdmin = session?.user?.role === "ADMIN"
-  const showAdminControls = isAdmin && !isPreviewMode
-  const gridTemplateColumns = useMemo(
-    () =>
-      showAdminControls
-        ? `minmax(280px, 2fr) 140px 120px repeat(${columns.length}, minmax(92px, 1fr)) 44px`
-        : `minmax(280px, 2fr) 140px 120px repeat(${columns.length}, minmax(92px, 1fr))`,
-    [showAdminControls, columns.length]
-  )
+  const isViewingSnapshot = activeSnapshot !== null
+  const showAdminControls = isAdmin && !isPreviewMode && !isViewingSnapshot
+  const gridTemplateColumns = useMemo(() => {
+    if (isPreviewMode) {
+      return `minmax(280px, 2fr) 120px repeat(${columns.length}, minmax(92px, 1fr))`
+    }
+    return showAdminControls
+      ? `minmax(280px, 2fr) 140px 120px repeat(${columns.length}, minmax(92px, 1fr)) 44px`
+      : `minmax(280px, 2fr) 140px 120px repeat(${columns.length}, minmax(92px, 1fr))`
+  }, [showAdminControls, isPreviewMode, columns.length])
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -245,6 +271,38 @@ export default function TimelineView() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const fetchSnapshots = async () => {
+    if (!roadmap?.id) return
+    setIsLoadingSnapshots(true)
+    try {
+      const res = await fetch(`/api/roadmap/snapshots?roadmapId=${roadmap.id}`, {
+        credentials: "include",
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSnapshots(data)
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setIsLoadingSnapshots(false)
+    }
+  }
+
+  const handleViewSnapshot = (snapshot: RoadmapSnapshot) => {
+    setLiveRoadmap(roadmap)
+    setActiveSnapshot(snapshot)
+    setRoadmap(snapshot.data as Roadmap)
+  }
+
+  const handleExitSnapshot = () => {
+    if (liveRoadmap) {
+      setRoadmap(liveRoadmap)
+    }
+    setActiveSnapshot(null)
+    setLiveRoadmap(null)
   }
 
   const handleCreateSection = async (e: React.FormEvent) => {
@@ -483,6 +541,43 @@ export default function TimelineView() {
                   <Camera className="mr-2 h-4 w-4" />
                   Snapshot
                 </Button>
+                <DropdownMenu onOpenChange={(open) => { if (open) fetchSnapshots() }}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" title="View past snapshots">
+                      <History className="mr-2 h-4 w-4" />
+                      History
+                      <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-72">
+                    <DropdownMenuLabel>Past Snapshots</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {isLoadingSnapshots ? (
+                      <div className="px-2 py-4 text-center text-sm text-muted-foreground">Loading...</div>
+                    ) : snapshots.length === 0 ? (
+                      <div className="px-2 py-4 text-center text-sm text-muted-foreground">No snapshots yet</div>
+                    ) : (
+                      snapshots.map((snapshot) => (
+                        <DropdownMenuItem
+                          key={snapshot.id}
+                          onClick={() => handleViewSnapshot(snapshot)}
+                          className="flex cursor-pointer flex-col items-start gap-0.5 py-2"
+                        >
+                          <span className="text-sm font-medium">{snapshot.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(snapshot.createdAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
                   variant="outline"
                   onClick={() => setIsPreviewMode(true)}
@@ -506,6 +601,14 @@ export default function TimelineView() {
                 Exit Preview
               </Button>
             )}
+            {isViewingSnapshot && (
+              <Button
+                variant="outline"
+                onClick={handleExitSnapshot}
+              >
+                Back to live roadmap
+              </Button>
+            )}
             {!isPreviewMode && (
               <Button variant="outline" onClick={() => signOut()}>
                 <LogOut className="mr-2 h-4 w-4" />
@@ -515,6 +618,41 @@ export default function TimelineView() {
           </div>
         </div>
       </header>
+
+      {isViewingSnapshot && activeSnapshot && (
+        <div className="border-b border-amber-300 bg-amber-50 px-6 py-3">
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <History className="h-5 w-5 text-amber-600" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900">
+                  Viewing snapshot: {activeSnapshot.name}
+                </p>
+                <p className="text-xs text-amber-700">
+                  Saved on{" "}
+                  {new Date(activeSnapshot.createdAt).toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                  {" "}&mdash; Read-only view
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExitSnapshot}
+              className="border-amber-400 bg-white text-amber-900 hover:bg-amber-100"
+            >
+              Back to live roadmap
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-6 py-8">
         {!isPreviewMode && (
@@ -593,12 +731,20 @@ export default function TimelineView() {
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   {QUARTERS.map((quarter) => (
                     <div key={quarter} className="rounded-md border border-[hsl(var(--roadmap-border-default))] bg-[hsl(var(--roadmap-surface-base))] p-2">
-                      <p className="mb-1 text-xs font-medium">Q{quarter} {year}</p>
+                      <p className="mb-1.5 text-xs font-semibold">Q{quarter} {year}</p>
                       <div className="space-y-1 text-xs text-[hsl(var(--roadmap-text-muted))]">
-                        <div className="flex items-center justify-between"><span>Total</span><span>{analyticsByQuarter[quarter]?.total ?? 0}</span></div>
+                        <div className="flex items-center justify-between font-medium text-[hsl(var(--roadmap-text-primary))]"><span>Total</span><span>{analyticsByQuarter[quarter]?.total ?? 0}</span></div>
+                        <p className="pt-1 text-[10px] font-semibold uppercase tracking-wide opacity-60">Health</p>
+                        <div className="flex items-center justify-between"><span>Not started</span><span>{analyticsByQuarter[quarter]?.notStartedHealth ?? 0}</span></div>
                         <div className="flex items-center justify-between"><span>On track</span><span>{analyticsByQuarter[quarter]?.onTrack ?? 0}</span></div>
                         <div className="flex items-center justify-between"><span>At risk</span><span>{analyticsByQuarter[quarter]?.atRisk ?? 0}</span></div>
                         <div className="flex items-center justify-between"><span>Delayed</span><span>{analyticsByQuarter[quarter]?.delayed ?? 0}</span></div>
+                        <div className="my-1 border-t border-[hsl(var(--roadmap-border-default))]" />
+                        <p className="text-[10px] font-semibold uppercase tracking-wide opacity-60">Status</p>
+                        <div className="flex items-center justify-between"><span>Not started</span><span>{analyticsByQuarter[quarter]?.notStarted ?? 0}</span></div>
+                        <div className="flex items-center justify-between"><span>Discovery</span><span>{analyticsByQuarter[quarter]?.discovery ?? 0}</span></div>
+                        <div className="flex items-center justify-between"><span>Design</span><span>{analyticsByQuarter[quarter]?.design ?? 0}</span></div>
+                        <div className="flex items-center justify-between"><span>Planning</span><span>{analyticsByQuarter[quarter]?.planning ?? 0}</span></div>
                         <div className="flex items-center justify-between"><span>Development</span><span>{analyticsByQuarter[quarter]?.development ?? 0}</span></div>
                         <div className="flex items-center justify-between"><span>Released</span><span>{analyticsByQuarter[quarter]?.released ?? 0}</span></div>
                       </div>
@@ -703,7 +849,7 @@ export default function TimelineView() {
               style={{ gridTemplateColumns }}
             >
               <div className="text-xs font-bold uppercase tracking-wide text-white">Initiative</div>
-              <div className="text-xs font-bold uppercase tracking-wide text-white">Health</div>
+              {!isPreviewMode && <div className="text-xs font-bold uppercase tracking-wide text-white">Health</div>}
               <div className="text-xs font-bold uppercase tracking-wide text-white">Progress</div>
               {columns.map((col, index) => {
                 const displayText = col.type === "quarter" 
@@ -839,8 +985,8 @@ export default function TimelineView() {
                 <Section
                   section={section}
                   year={year}
-                  isAdmin={isAdmin && !isPreviewMode}
-                  showColumnActions={isAdmin && !isPreviewMode}
+                  isAdmin={isAdmin && !isPreviewMode && !isViewingSnapshot}
+                  showColumnActions={isAdmin && !isPreviewMode && !isViewingSnapshot}
                   onDelete={handleDeleteSection}
                   onUpdate={handleUpdateRoadmap}
                   allSections={roadmap.sections}
@@ -849,6 +995,7 @@ export default function TimelineView() {
                   columns={columns}
                   gridTemplateColumns={gridTemplateColumns}
                   allowItemReorder={!isFilterActive}
+                  showHealthColumn={!isPreviewMode}
                 />
               </div>
             ))}
@@ -962,10 +1109,36 @@ export default function TimelineView() {
               }
             }}
             year={year}
-            isAdmin={isAdmin}
+            isAdmin={isAdmin && !isViewingSnapshot}
             allItems={
               roadmap?.sections.flatMap((s) => s.items) ?? []
             }
+            onDelete={isAdmin && !isViewingSnapshot ? async () => {
+              if (!selectedItem) return
+              try {
+                const response = await fetch(`/api/roadmap/items?itemId=${selectedItem.id}`, {
+                  method: "DELETE",
+                })
+                if (response.ok) {
+                  setRoadmap((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          sections: prev.sections.map((s) => ({
+                            ...s,
+                            items: s.items.filter((i) => i.id !== selectedItem.id),
+                          })),
+                        }
+                      : null
+                  )
+                  toast({ title: "Item deleted" })
+                } else {
+                  toast({ title: "Error", description: "Failed to delete item", variant: "destructive" })
+                }
+              } catch {
+                toast({ title: "Error", description: "Failed to delete item", variant: "destructive" })
+              }
+            } : undefined}
           />
         )}
 
@@ -1012,6 +1185,7 @@ export default function TimelineView() {
                     if (res.ok) {
                       setIsSnapshotDialogOpen(false)
                       setSnapshotName("")
+                      fetchSnapshots()
                       toast({
                         title: "Snapshot saved",
                         description: "Roadmap snapshot has been created.",
