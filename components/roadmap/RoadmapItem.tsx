@@ -165,17 +165,12 @@ export default function RoadmapItem({
 
       if (response.ok) {
         const updatedItem = await response.json()
-        // Only update UI if panel was open (not optimistic update)
+        onUpdate(updatedItem)
         if (isEditorOpen) {
-          onUpdate(updatedItem)
-          setIsEditorOpen(false)
           toast({
             title: "Success",
             description: "Item updated successfully",
           })
-        } else {
-          // For optimistic updates, sync with server response
-          onUpdate(updatedItem)
         }
       } else {
         const error = await response.json()

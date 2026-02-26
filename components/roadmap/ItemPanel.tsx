@@ -51,7 +51,7 @@ interface ItemPanelProps {
     dependsOnIds?: string[]
     productBrief?: string | null
     designs?: string | null
-  }) => void
+  }) => Promise<void>
   year: number
   isAdmin: boolean
   onRefresh?: () => void
@@ -110,6 +110,7 @@ export default function ItemPanel({
   const [newJiraLink, setNewJiraLink] = useState("")
   const [newComment, setNewComment] = useState("")
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   useEffect(() => {
@@ -134,6 +135,7 @@ export default function ItemPanel({
       setNewJiraLink("")
       setNewComment("")
       setIsEditing(false)
+      setIsSaving(false)
       setIsDeleteDialogOpen(false)
     }
   }, [isOpen, item, year])
@@ -158,22 +160,27 @@ export default function ItemPanel({
     setJiraLinks(jiraLinks.filter((l) => l !== link))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isAdmin) return
-    onSave({
-      name,
-      description: description || null,
-      status,
-      risk: risk || null,
-      blockerNotes: blockerNotes || null,
-      quarters,
-      jiraLinks,
-      dependsOnIds,
-      productBrief: productBrief || null,
-      designs: designs || null,
-    })
-    setIsEditing(false)
+    setIsSaving(true)
+    try {
+      await onSave({
+        name,
+        description: description || null,
+        status,
+        risk: risk || null,
+        blockerNotes: blockerNotes || null,
+        quarters,
+        jiraLinks,
+        dependsOnIds,
+        productBrief: productBrief || null,
+        designs: designs || null,
+      })
+      setIsEditing(false)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleAddComment = async () => {
@@ -441,10 +448,13 @@ export default function ItemPanel({
                   </div>
                 )}
                 <div className="flex gap-2 pt-4">
-                  <Button type="submit">Save Changes</Button>
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? "Saving…" : "Save Changes"}
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"
+                    disabled={isSaving}
                     onClick={() => setIsEditing(false)}
                   >
                     Cancel
