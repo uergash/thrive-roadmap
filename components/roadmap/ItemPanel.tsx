@@ -178,6 +178,8 @@ export default function ItemPanel({
         designs: designs || null,
       })
       setIsEditing(false)
+    } catch {
+      // Error toast already shown by onSave — stay in edit mode
     } finally {
       setIsSaving(false)
     }

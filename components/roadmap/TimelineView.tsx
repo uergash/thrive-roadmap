@@ -1094,18 +1094,23 @@ export default function TimelineView() {
                   })
                 } else {
                   const error = await response.json()
+                  const message = error.error || "Failed to update item"
                   toast({
                     title: "Error",
-                    description: error.error || "Failed to update item",
+                    description: message,
+                    variant: "destructive",
+                  })
+                  throw new Error(message)
+                }
+              } catch (error) {
+                if (error instanceof Error && !error.message.includes("Failed to update")) {
+                  toast({
+                    title: "Error",
+                    description: "An error occurred while updating item",
                     variant: "destructive",
                   })
                 }
-              } catch (error) {
-                toast({
-                  title: "Error",
-                  description: "An error occurred while updating item",
-                  variant: "destructive",
-                })
+                throw error
               }
             }}
             year={year}
