@@ -8,7 +8,6 @@ import QuarterBar from "./QuarterBar"
 import ItemPanel from "./ItemPanel"
 import StatusSelector from "./StatusSelector"
 import HealthSelector from "./HealthSelector"
-import { ExternalLink } from "lucide-react"
 import type { RoadmapItem as RoadmapItemType } from "@/types/roadmap"
 
 interface RoadmapItemProps {
@@ -45,6 +44,7 @@ export default function RoadmapItem({
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [isEditingName, setIsEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(item.name)
+  const jiraLinks = item.jiraLinks ?? []
 
   useEffect(() => {
     setNameDraft(item.name)
@@ -82,7 +82,7 @@ export default function RoadmapItem({
       risk: item.risk || null,
       blockerNotes: item.blockerNotes || null,
       quarters: newQuarters,
-      jiraLinks: item.jiraLinks,
+      jiraLinks,
     }).catch(() => {
       // Revert on error
       onUpdate(item)
@@ -104,7 +104,7 @@ export default function RoadmapItem({
       risk: item.risk || null,
       blockerNotes: item.blockerNotes || null,
       quarters: getQuarterNumbers(),
-      jiraLinks: item.jiraLinks,
+      jiraLinks,
     }).catch(() => {
       onUpdate(item)
       toast({
@@ -125,7 +125,7 @@ export default function RoadmapItem({
       risk: health,
       blockerNotes: item.blockerNotes || null,
       quarters: getQuarterNumbers(),
-      jiraLinks: item.jiraLinks,
+      jiraLinks,
     }).catch(() => {
       onUpdate(item)
       toast({
@@ -300,21 +300,15 @@ export default function RoadmapItem({
               />
             ) : (
               <button
-                onClick={() => {
-                  if (isAdmin) {
-                    setIsEditingName(true)
-                  } else {
-                    setIsEditorOpen(true)
-                  }
-                }}
+                onClick={() => setIsEditorOpen(true)}
                 className="w-full cursor-pointer text-left text-sm font-medium leading-5 text-[hsl(var(--roadmap-text-primary))] hover:text-[hsl(var(--roadmap-accent-brand))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--roadmap-accent-brand))]"
               >
                 {item.name}
               </button>
             )}
-            {item.jiraLinks.length > 0 && (
+            {jiraLinks.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
-                {item.jiraLinks.map((key) => (
+                {jiraLinks.map((key) => (
                   <a
                     key={key}
                     href={`https://jira.example.com/browse/${key}`}
@@ -330,22 +324,6 @@ export default function RoadmapItem({
               </div>
             )}
           </div>
-          {isAdmin && (
-            <div className="pointer-events-none flex items-center opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setIsEditorOpen(true)
-                }}
-                className="h-6 w-6 focus-visible:ring-2 focus-visible:ring-[hsl(var(--roadmap-accent-brand))]"
-                title="Open details"
-              >
-                <ExternalLink className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
         </div>
         {showHealthColumn && (
           <div className="flex items-center">

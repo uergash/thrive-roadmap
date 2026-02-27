@@ -33,7 +33,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { X, ExternalLink, Pencil, MoreHorizontal, Trash2 } from "lucide-react"
+import { ExternalLink, Pencil, MoreHorizontal, Trash2 } from "lucide-react"
 import type { RoadmapItem } from "@/types/roadmap"
 
 interface ItemPanelProps {
@@ -105,9 +105,8 @@ export default function ItemPanel({
   const [productBrief, setProductBrief] = useState(item.productBrief || "")
   const [designs, setDesigns] = useState(item.designs || "")
   const [quarters, setQuarters] = useState<number[]>([])
-  const [jiraLinks, setJiraLinks] = useState<string[]>([])
+  const [jiraLink, setJiraLink] = useState("")
   const [dependsOnIds, setDependsOnIds] = useState<string[]>([])
-  const [newJiraLink, setNewJiraLink] = useState("")
   const [newComment, setNewComment] = useState("")
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -128,11 +127,10 @@ export default function ItemPanel({
           .map((q) => q.quarter)
           .sort()
       )
-      setJiraLinks(item.jiraLinks)
+      setJiraLink((item.jiraLinks ?? [])[0] || "")
       setDependsOnIds(
         (item.dependencies || []).map((d) => d.dependsOnId)
       )
-      setNewJiraLink("")
       setNewComment("")
       setIsEditing(false)
       setIsSaving(false)
@@ -148,18 +146,6 @@ export default function ItemPanel({
     )
   }
 
-  const handleAddJiraLink = () => {
-    const key = extractJiraKey(newJiraLink)
-    if (key && !jiraLinks.includes(key)) {
-      setJiraLinks([...jiraLinks, key])
-      setNewJiraLink("")
-    }
-  }
-
-  const handleRemoveJiraLink = (link: string) => {
-    setJiraLinks(jiraLinks.filter((l) => l !== link))
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isAdmin) return
@@ -172,7 +158,7 @@ export default function ItemPanel({
         risk: risk || null,
         blockerNotes: blockerNotes || null,
         quarters,
-        jiraLinks,
+        jiraLinks: jiraLink.trim() ? [jiraLink.trim()] : [],
         dependsOnIds,
         productBrief: productBrief || null,
         designs: designs || null,
@@ -206,17 +192,6 @@ export default function ItemPanel({
     setIsDeleteDialogOpen(false)
     onDelete?.()
     onClose()
-  }
-
-  const extractJiraKey = (input: string): string => {
-    const urlMatch = input.match(/([A-Z]+-\d+)/)
-    if (urlMatch) {
-      return urlMatch[1]
-    }
-    if (/^[A-Z]+-\d+$/.test(input.trim())) {
-      return input.trim()
-    }
-    return input.trim()
   }
 
   const getStatusColor = (status: string) => {
@@ -380,42 +355,13 @@ export default function ItemPanel({
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>JIRA Links</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="PROJ-123 or JIRA URL"
-                        value={newJiraLink}
-                        onChange={(e) => setNewJiraLink(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault()
-                            handleAddJiraLink()
-                          }
-                        }}
-                      />
-                      <Button type="button" onClick={handleAddJiraLink}>
-                        Add
-                      </Button>
-                    </div>
-                    {jiraLinks.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {jiraLinks.map((link) => (
-                          <div
-                            key={link}
-                            className="flex items-center gap-1 rounded bg-blue-100 px-2 py-1 text-sm text-blue-800"
-                          >
-                            {link}
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveJiraLink(link)}
-                              className="ml-1 hover:text-blue-600"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <Label htmlFor="jiraLink">JIRA Link</Label>
+                    <Input
+                      id="jiraLink"
+                      value={jiraLink}
+                      onChange={(e) => setJiraLink(e.target.value)}
+                      placeholder="https://... or PROJ-123"
+                    />
                   </div>
                 </div>
                 {availableDeps.length > 0 && (
@@ -572,21 +518,22 @@ export default function ItemPanel({
                     </div>
                   </div>
                   <div>
-                    <Label className="text-sm font-semibold">JIRA Links</Label>
-                    {item.jiraLinks.length > 0 ? (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {item.jiraLinks.map((key) => (
+                    <Label className="text-sm font-semibold">JIRA Link</Label>
+                    {item.jiraLinks?.[0] ? (
+                      <div className="mt-1">
+                        {isUrl(item.jiraLinks[0]) ? (
                           <a
-                            key={key}
-                            href={`https://jira.example.com/browse/${key}`}
+                            href={item.jiraLinks[0]}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded bg-blue-100 px-3 py-1 text-sm text-blue-800 hover:bg-blue-200"
+                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
                           >
-                            {key}
+                            {item.jiraLinks[0]}
                             <ExternalLink className="h-3 w-3" />
                           </a>
-                        ))}
+                        ) : (
+                          <p className="text-sm text-gray-600">{item.jiraLinks[0]}</p>
+                        )}
                       </div>
                     ) : (
                       <p className="mt-1 text-sm text-gray-500">—</p>

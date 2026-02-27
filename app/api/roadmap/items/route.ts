@@ -101,10 +101,7 @@ export async function POST(request: NextRequest) {
         status: data.status ?? "Not started",
         risk: data.risk ?? null,
         blockerNotes: data.blockerNotes ?? null,
-        productBrief: data.productBrief ?? null,
-        designs: data.designs ?? null,
         order: data.order ?? itemCount,
-        jiraLinks: data.jiraLinks ?? [],
         quarters: {
           create: (data.quarters ?? []).map((quarter) => ({
             quarter,
@@ -247,10 +244,7 @@ export async function PATCH(request: NextRequest) {
         ...(data.status && { status: data.status }),
         ...(data.risk !== undefined && { risk: data.risk }),
         ...(data.blockerNotes !== undefined && { blockerNotes: data.blockerNotes }),
-        ...(data.productBrief !== undefined && { productBrief: data.productBrief }),
-        ...(data.designs !== undefined && { designs: data.designs }),
         ...(data.order !== undefined && { order: data.order }),
-        ...(data.jiraLinks !== undefined && { jiraLinks: data.jiraLinks }),
         ...(data.quarters !== undefined && {
           quarters: {
             create: data.quarters.map((quarter) => ({
