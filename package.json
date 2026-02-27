@@ -7,7 +7,7 @@
     "dev:prod": "next build && next start",
     "start:alt": "PORT=3002 next start",
     "kill-port": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "create-admin": "tsx scripts/create-admin.ts"
@@ -33,6 +33,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.15.8",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.0",
