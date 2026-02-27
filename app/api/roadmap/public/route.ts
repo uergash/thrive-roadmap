@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
             items: {
               include: {
                 quarters: true,
-                jiraLinks: true,
+
                 dependencies: {
                   include: {
                     dependsOn: {

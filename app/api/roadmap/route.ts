@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
           items: {
             include: {
               quarters: true,
-              jiraLinks: true,
+
               dependencies: {
                 include: {
                   dependsOn: {
@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest) {
             items: {
               include: {
                 quarters: true,
-                jiraLinks: true,
+  
                 dependencies: {
                   include: {
                     dependsOn: {
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
             items: {
               include: {
                 quarters: true,
-                jiraLinks: true,
+  
               },
             },
           },

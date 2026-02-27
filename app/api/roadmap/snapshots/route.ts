@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
             items: {
               include: {
                 quarters: true,
-                jiraLinks: true,
+
                 dependencies: {
                   include: {
                     dependsOn: {
