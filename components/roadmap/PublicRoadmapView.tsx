@@ -174,7 +174,7 @@ export default function PublicRoadmapView() {
             setIsItemPanelOpen(false)
             setSelectedItem(null)
           }}
-          onSave={() => {}}
+          onSave={async () => {}}
           year={year}
           isAdmin={false}
         />
