@@ -72,7 +72,7 @@ model Item {
   productBrief  String?    @db.Text
   designs       String?    @db.Text
   order         Int        // for sorting within section
-  jiraLinks     String[]   @default([])
+  jiraLinks     String?    @db.Text
   quarters      Quarter[]
   dependencies  ItemDependency[] @relation("ItemDependencies")
   dependedOnBy  ItemDependency[] @relation("ItemDependedOn")

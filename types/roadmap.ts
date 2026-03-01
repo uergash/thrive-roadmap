@@ -12,7 +12,7 @@ export interface RoadmapItem {
   sectionId: string
   order: number
   quarters: Quarter[]
-  jiraLinks: string[]
+  jiraLinks: string | null
   dependencies?: ItemDependency[]
   comments?: ItemComment[]
   changeLogs?: ItemChangeLog[]

@@ -152,9 +152,11 @@ export default function PublicRoadmapView() {
                         {item.quarters.map((quarter) => (
                           <span key={quarter.id} className="rounded bg-gray-100 px-2 py-1">Q{quarter.quarter} {quarter.year}</span>
                         ))}
-                        {item.jiraLinks.map((key) => (
-                          <span key={key} className="rounded bg-indigo-100 px-2 py-1 text-indigo-800">{key}</span>
-                        ))}
+                        {item.jiraLinks && (
+                          <span className="rounded bg-indigo-100 px-2 py-1 text-indigo-800">
+                            {item.jiraLinks}
+                          </span>
+                        )}
                       </div>
                     </button>
                   ))}

@@ -20,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { X } from "lucide-react"
 import type { RoadmapItem } from "@/types/roadmap"
 
 interface ItemEditorProps {
@@ -32,7 +31,7 @@ interface ItemEditorProps {
     description: string | null
     status: string
     quarters: number[]
-    jiraLinks: string[]
+    jiraLinks: string
   }) => void
   year: number
 }
@@ -57,8 +56,7 @@ export default function ItemEditor({
   const [description, setDescription] = useState(item.description || "")
   const [status, setStatus] = useState(item.status)
   const [quarters, setQuarters] = useState<number[]>([])
-  const [jiraLinks, setJiraLinks] = useState<string[]>([])
-  const [newJiraLink, setNewJiraLink] = useState("")
+  const [jiraLink, setJiraLink] = useState("")
 
   useEffect(() => {
     if (isOpen) {
@@ -71,8 +69,7 @@ export default function ItemEditor({
           .map((q) => q.quarter)
           .sort()
       )
-      setJiraLinks(item.jiraLinks)
-      setNewJiraLink("")
+      setJiraLink(item.jiraLinks || "")
     }
   }, [isOpen, item, year])
 
@@ -84,17 +81,6 @@ export default function ItemEditor({
     )
   }
 
-  const handleAddJiraLink = () => {
-    if (newJiraLink.trim() && !jiraLinks.includes(newJiraLink.trim())) {
-      setJiraLinks([...jiraLinks, newJiraLink.trim()])
-      setNewJiraLink("")
-    }
-  }
-
-  const handleRemoveJiraLink = (link: string) => {
-    setJiraLinks(jiraLinks.filter((l) => l !== link))
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave({
@@ -102,21 +88,8 @@ export default function ItemEditor({
       description: description || null,
       status,
       quarters,
-      jiraLinks,
+      jiraLinks: jiraLink.trim(),
     })
-  }
-
-  const extractJiraKey = (input: string): string => {
-    // Try to extract JIRA key from URL or use as-is
-    const urlMatch = input.match(/([A-Z]+-\d+)/)
-    if (urlMatch) {
-      return urlMatch[1]
-    }
-    // If it looks like a JIRA key (PROJ-123 format), use it
-    if (/^[A-Z]+-\d+$/.test(input.trim())) {
-      return input.trim()
-    }
-    return input.trim()
   }
 
   return (
@@ -180,51 +153,13 @@ export default function ItemEditor({
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>JIRA Links</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="PROJ-123 or JIRA URL"
-                  value={newJiraLink}
-                  onChange={(e) => setNewJiraLink(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      handleAddJiraLink()
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  onClick={() => {
-                    const key = extractJiraKey(newJiraLink)
-                    if (key && !jiraLinks.includes(key)) {
-                      setJiraLinks([...jiraLinks, key])
-                      setNewJiraLink("")
-                    }
-                  }}
-                >
-                  Add
-                </Button>
-              </div>
-              {jiraLinks.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                    {jiraLinks.map((link) => (
-                      <div
-                        key={link}
-                        className="flex items-center gap-1 rounded bg-blue-100 px-2 py-1 text-sm text-blue-800"
-                      >
-                        {link}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveJiraLink(link)}
-                          className="ml-1 hover:text-blue-600"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              )}
+              <Label htmlFor="jiraLink">JIRA Link</Label>
+              <Input
+                id="jiraLink"
+                placeholder="PROJ-123 or JIRA URL"
+                value={jiraLink}
+                onChange={(e) => setJiraLink(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>

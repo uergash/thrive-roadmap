@@ -15,6 +15,7 @@ interface SectionProps {
   year: number
   isAdmin: boolean
   showColumnActions?: boolean
+  showHealthColumn?: boolean
   onDelete: (sectionId: string) => void
   onUpdate: (sections: SectionType[]) => void
   allSections: SectionType[]
@@ -30,6 +31,7 @@ export default function Section({
   year,
   isAdmin,
   showColumnActions = false,
+  showHealthColumn = true,
   onDelete,
   onUpdate,
   allSections,
@@ -432,6 +434,7 @@ export default function Section({
                   showColumnActions={showColumnActions}
                   allItems={allSections.flatMap((s) => s.items)}
                   gridTemplateColumns={sectionGridTemplate}
+                  showHealthColumn={showHealthColumn}
                 />
               </div>
             ))}

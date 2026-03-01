@@ -16,7 +16,7 @@ const itemSchema = z.object({
   order: z.number().int().optional(),
   quarters: z.array(z.number().int().min(1).max(4)).optional(),
   year: z.number().int().optional(),
-  jiraLinks: z.array(z.string()).optional(),
+  jiraLinks: z.string().optional(),
   dependsOnIds: z.array(z.string()).optional(),
 })
 
@@ -101,6 +101,9 @@ export async function POST(request: NextRequest) {
         status: data.status ?? "Not started",
         risk: data.risk ?? null,
         blockerNotes: data.blockerNotes ?? null,
+        productBrief: data.productBrief ?? null,
+        designs: data.designs ?? null,
+        jiraLinks: data.jiraLinks ?? "",
         order: data.order ?? itemCount,
         quarters: {
           create: (data.quarters ?? []).map((quarter) => ({
@@ -200,7 +203,7 @@ export async function PATCH(request: NextRequest) {
       order: z.number().int().optional(),
       quarters: z.array(z.number().int().min(1).max(4)).optional(),
       year: z.number().int().optional(),
-      jiraLinks: z.array(z.string()).optional(),
+      jiraLinks: z.string().optional(),
       dependsOnIds: z.array(z.string()).optional(),
     })
 
@@ -244,6 +247,9 @@ export async function PATCH(request: NextRequest) {
         ...(data.status && { status: data.status }),
         ...(data.risk !== undefined && { risk: data.risk }),
         ...(data.blockerNotes !== undefined && { blockerNotes: data.blockerNotes }),
+        ...(data.productBrief !== undefined && { productBrief: data.productBrief }),
+        ...(data.designs !== undefined && { designs: data.designs }),
+        ...(data.jiraLinks !== undefined && { jiraLinks: data.jiraLinks }),
         ...(data.order !== undefined && { order: data.order }),
         ...(data.quarters !== undefined && {
           quarters: {

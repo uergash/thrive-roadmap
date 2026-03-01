@@ -34,7 +34,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { ExternalLink, Pencil, MoreHorizontal, Trash2 } from "lucide-react"
-import type { RoadmapItem } from "@/types/roadmap"
+import type { ItemComment, RoadmapItem } from "@/types/roadmap"
 
 interface ItemPanelProps {
   item: RoadmapItem
@@ -47,7 +47,7 @@ interface ItemPanelProps {
     risk: string | null
     blockerNotes: string | null
     quarters: number[]
-    jiraLinks: string[]
+    jiraLinks: string
     dependsOnIds?: string[]
     productBrief?: string | null
     designs?: string | null
@@ -85,6 +85,35 @@ function isUrl(value: string): boolean {
   return /^https?:\/\//i.test(value.trim())
 }
 
+function renderCommentContent(content: string): React.ReactNode {
+  const urlPattern = /(https?:\/\/[^\s]+)/g
+  const parts = content.split(urlPattern)
+
+  return parts.map((part, index) => {
+    if (isUrl(part)) {
+      return (
+        <a
+          key={`${part}-${index}`}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          {part}
+        </a>
+      )
+    }
+
+    return <span key={`${part}-${index}`}>{part}</span>
+  })
+}
+
+function sortCommentsNewestFirst(comments: ItemComment[]): ItemComment[] {
+  return [...comments].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
+}
+
 export default function ItemPanel({
   item,
   isOpen,
@@ -108,6 +137,13 @@ export default function ItemPanel({
   const [jiraLink, setJiraLink] = useState("")
   const [dependsOnIds, setDependsOnIds] = useState<string[]>([])
   const [newComment, setNewComment] = useState("")
+  const [comments, setComments] = useState<ItemComment[]>(
+    sortCommentsNewestFirst(item.comments ?? [])
+  )
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [editingCommentContent, setEditingCommentContent] = useState("")
+  const [isUpdatingComment, setIsUpdatingComment] = useState(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -127,11 +163,16 @@ export default function ItemPanel({
           .map((q) => q.quarter)
           .sort()
       )
-      setJiraLink((item.jiraLinks ?? [])[0] || "")
+      setJiraLink(item.jiraLinks || "")
       setDependsOnIds(
         (item.dependencies || []).map((d) => d.dependsOnId)
       )
+      setComments(sortCommentsNewestFirst(item.comments ?? []))
       setNewComment("")
+      setEditingCommentId(null)
+      setEditingCommentContent("")
+      setIsUpdatingComment(false)
+      setDeletingCommentId(null)
       setIsEditing(false)
       setIsSaving(false)
       setIsDeleteDialogOpen(false)
@@ -158,7 +199,7 @@ export default function ItemPanel({
         risk: risk || null,
         blockerNotes: blockerNotes || null,
         quarters,
-        jiraLinks: jiraLink.trim() ? [jiraLink.trim()] : [],
+        jiraLinks: jiraLink.trim(),
         dependsOnIds,
         productBrief: productBrief || null,
         designs: designs || null,
@@ -180,11 +221,78 @@ export default function ItemPanel({
         body: JSON.stringify({ itemId: item.id, content: newComment.trim() }),
       })
       if (res.ok) {
+        const createdComment = await res.json()
+        setComments((prev) =>
+          sortCommentsNewestFirst([...prev, createdComment])
+        )
         setNewComment("")
         onRefresh?.()
       }
     } catch {
       // pass
+    }
+  }
+
+  const handleStartCommentEdit = (comment: ItemComment) => {
+    setEditingCommentId(comment.id)
+    setEditingCommentContent(comment.content)
+  }
+
+  const handleCancelCommentEdit = () => {
+    setEditingCommentId(null)
+    setEditingCommentContent("")
+    setIsUpdatingComment(false)
+  }
+
+  const handleSaveCommentEdit = async () => {
+    if (!editingCommentId || !editingCommentContent.trim() || !isAdmin) return
+
+    setIsUpdatingComment(true)
+    try {
+      const res = await fetch("/api/roadmap/items/comments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          commentId: editingCommentId,
+          content: editingCommentContent.trim(),
+        }),
+      })
+      if (res.ok) {
+        const updatedComment = await res.json()
+        setComments((prev) =>
+          sortCommentsNewestFirst(prev.map((comment) =>
+            comment.id === updatedComment.id
+              ? { ...comment, content: updatedComment.content, createdAt: updatedComment.createdAt }
+              : comment
+          ))
+        )
+        handleCancelCommentEdit()
+        onRefresh?.()
+      }
+    } catch {
+      setIsUpdatingComment(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!isAdmin) return
+
+    setDeletingCommentId(commentId)
+    try {
+      const res = await fetch(`/api/roadmap/items/comments?commentId=${commentId}`, {
+        method: "DELETE",
+      })
+      if (res.ok) {
+        setComments((prev) => prev.filter((comment) => comment.id !== commentId))
+        if (editingCommentId === commentId) {
+          handleCancelCommentEdit()
+        }
+        onRefresh?.()
+      }
+    } catch {
+      // pass
+    } finally {
+      setDeletingCommentId(null)
     }
   }
 
@@ -482,7 +590,7 @@ export default function ItemPanel({
                             href={item.productBrief}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                            className="inline-flex max-w-full items-center gap-1 break-all text-sm text-blue-600 hover:underline"
                           >
                             {item.productBrief}
                             <ExternalLink className="h-3 w-3" />
@@ -504,7 +612,7 @@ export default function ItemPanel({
                             href={item.designs}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                            className="inline-flex max-w-full items-center gap-1 break-all text-sm text-blue-600 hover:underline"
                           >
                             {item.designs}
                             <ExternalLink className="h-3 w-3" />
@@ -519,20 +627,20 @@ export default function ItemPanel({
                   </div>
                   <div>
                     <Label className="text-sm font-semibold">JIRA Link</Label>
-                    {item.jiraLinks?.[0] ? (
+                    {item.jiraLinks ? (
                       <div className="mt-1">
-                        {isUrl(item.jiraLinks[0]) ? (
+                        {isUrl(item.jiraLinks) ? (
                           <a
-                            href={item.jiraLinks[0]}
+                            href={item.jiraLinks}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                            className="inline-flex max-w-full items-center gap-1 break-all text-sm text-blue-600 hover:underline"
                           >
-                            {item.jiraLinks[0]}
+                            {item.jiraLinks}
                             <ExternalLink className="h-3 w-3" />
                           </a>
                         ) : (
-                          <p className="text-sm text-gray-600">{item.jiraLinks[0]}</p>
+                          <p className="text-sm text-gray-600">{item.jiraLinks}</p>
                         )}
                       </div>
                     ) : (
@@ -540,16 +648,64 @@ export default function ItemPanel({
                     )}
                   </div>
                 </div>
-                {(item.comments?.length ?? 0) > 0 && (
+                {comments.length > 0 && (
                   <div>
                     <Label className="text-sm font-semibold">Comments</Label>
                     <div className="mt-2 space-y-2">
-                      {item.comments?.map((c: { id: string; content: string; createdAt: string }) => (
+                      {comments.map((c) => (
                         <div key={c.id} className="rounded bg-gray-50 p-2 text-sm">
-                          <p>{c.content}</p>
+                          {editingCommentId === c.id ? (
+                            <div className="space-y-2">
+                              <Textarea
+                                value={editingCommentContent}
+                                onChange={(e) => setEditingCommentContent(e.target.value)}
+                                rows={2}
+                              />
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={handleSaveCommentEdit}
+                                  disabled={isUpdatingComment || !editingCommentContent.trim()}
+                                >
+                                  {isUpdatingComment ? "Saving..." : "Save"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancelCommentEdit}
+                                  disabled={isUpdatingComment}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="break-words">{renderCommentContent(c.content)}</p>
+                          )}
                           <p className="mt-1 text-xs text-gray-500">
                             {new Date(c.createdAt).toLocaleString()}
                           </p>
+                          {isAdmin && editingCommentId !== c.id && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => handleStartCommentEdit(c)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
+                                onClick={() => handleDeleteComment(c.id)}
+                                disabled={deletingCommentId === c.id}
+                              >
+                                {deletingCommentId === c.id ? "Deleting..." : "Delete"}
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

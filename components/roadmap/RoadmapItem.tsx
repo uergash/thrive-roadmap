@@ -44,7 +44,6 @@ export default function RoadmapItem({
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [isEditingName, setIsEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(item.name)
-  const jiraLinks = item.jiraLinks ?? []
 
   useEffect(() => {
     setNameDraft(item.name)
@@ -82,7 +81,7 @@ export default function RoadmapItem({
       risk: item.risk || null,
       blockerNotes: item.blockerNotes || null,
       quarters: newQuarters,
-      jiraLinks,
+      jiraLinks: item.jiraLinks ?? "",
     }).catch(() => {
       // Revert on error
       onUpdate(item)
@@ -104,7 +103,7 @@ export default function RoadmapItem({
       risk: item.risk || null,
       blockerNotes: item.blockerNotes || null,
       quarters: getQuarterNumbers(),
-      jiraLinks,
+      jiraLinks: item.jiraLinks ?? "",
     }).catch(() => {
       onUpdate(item)
       toast({
@@ -125,7 +124,7 @@ export default function RoadmapItem({
       risk: health,
       blockerNotes: item.blockerNotes || null,
       quarters: getQuarterNumbers(),
-      jiraLinks,
+      jiraLinks: item.jiraLinks ?? "",
     }).catch(() => {
       onUpdate(item)
       toast({
@@ -143,7 +142,7 @@ export default function RoadmapItem({
     risk?: string | null
     blockerNotes?: string | null
     quarters: number[]
-    jiraLinks: string[]
+    jiraLinks: string
     dependsOnIds?: string[]
     productBrief?: string | null
     designs?: string | null
@@ -305,23 +304,6 @@ export default function RoadmapItem({
               >
                 {item.name}
               </button>
-            )}
-            {jiraLinks.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {jiraLinks.map((key) => (
-                  <a
-                    key={key}
-                    href={`https://jira.example.com/browse/${key}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs text-blue-800 hover:bg-blue-100"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {key}
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                ))}
-              </div>
             )}
           </div>
         </div>
