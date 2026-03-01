@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation"
 
 const links = [
   { href: "/roadmap", label: "Roadmap" },
-  { href: "/feedback", label: "Feedback" },
-  { href: "/concepts", label: "Concepts" },
 ]
 
 export default function MainNav() {
