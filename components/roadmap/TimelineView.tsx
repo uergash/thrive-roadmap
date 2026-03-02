@@ -655,7 +655,7 @@ export default function TimelineView() {
       )}
 
       <div className="container mx-auto px-6 py-8">
-        {!isPreviewMode && (
+        {!isPreviewMode && isAdmin && (
           <div className="mb-6 rounded-md border border-[hsl(var(--roadmap-border-default))] bg-[hsl(var(--roadmap-surface-base))] p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div>

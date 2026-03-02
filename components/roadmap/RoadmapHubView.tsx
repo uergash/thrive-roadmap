@@ -5,7 +5,7 @@ import PublicRoadmapView from "@/components/roadmap/PublicRoadmapView"
 import TimelineView from "@/components/roadmap/TimelineView"
 
 export default function RoadmapHubView() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
 
   if (status === "loading") {
     return (
@@ -15,7 +15,7 @@ export default function RoadmapHubView() {
     )
   }
 
-  if (status === "authenticated" && session?.user?.role === "ADMIN") {
+  if (status === "authenticated") {
     return <TimelineView />
   }
 
